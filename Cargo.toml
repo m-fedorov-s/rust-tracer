@@ -1,6 +1,6 @@
 [package]
 name = "rust_tracer"
-version = "0.1.0"
+version = "0.0.0"
 authors = ["Fedorov Mikhail <fedorov.mikhail.s@gmail.com>"]
 edition = "2018"
 

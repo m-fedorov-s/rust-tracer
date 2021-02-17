@@ -1,8 +1,10 @@
-struct Point(f64, f64, f64);
+#![allow(unused)]
+
+pub struct Point(f64, f64, f64);
 struct Vector(f64, f64, f64);
 
-// struct Triangle ??tree points?
-// struct Ray ?Two points, point and a vector??
+pub struct Triangle {}//??tree points?
+pub struct Ray {} // ?Two points, point and a vector??
 
 impl Point {
     fn distance(&self, other: &Point) -> f64 {

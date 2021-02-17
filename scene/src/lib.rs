@@ -1,3 +1,7 @@
+#![allow(unused)]
+use crate::geometry::Point;
+use crate::geometry::Triangle;
+use crate::geometry::Ray;
 use geometry;
 // TODO
 
@@ -15,20 +19,18 @@ struct LightSource {
 enum Object {
     // Objects may be some of geometric figure with a material describing it.
     Triangle(Material, Triangle),
-    Sphere(Material, Sphere)
+    // Sphere(Material, Sphere),
 }
 
 impl Object {
-    fn Intersects(&self, ray: &Ray) -> // bool or Point or distance or optional<Point> ?
+    fn intersects(&self, ray: &Ray) -> bool // or Point or distance or Option<Point> ?
     {
         panic!("Not implemented");
     }
 
-    fn Reflect(&self, ray: &Ray) -> Ray {
+    fn reflect(&self, ray: &Ray) -> Ray {
         panic!("Not implemented");
     }
-
-    fn 
 }
 
 struct Scene {
@@ -37,12 +39,12 @@ struct Scene {
 }
 
 impl Scene {
-    fn Intersects(&self, ray: &Ray) -> optional<Point> // beter optional<f64> - distance&
+    fn intersects(&self, ray: &Ray) -> Option<Point> // beter Option<f64> - distance&
     {
         panic!("Not implemented!");
     }
 
-    fn FromFile(filename: str&) -> Scene {
+    fn from_file(filename: &str) -> Scene {
         panic!("Not implemented!");
     }
 }

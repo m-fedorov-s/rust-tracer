@@ -5,45 +5,46 @@ struct Vector(f64, f64, f64);
 // struct Ray ?Two points, point and a vector??
 
 impl Point {
-    fn Distance(&self, other: &Point) -> f64 {
+    fn distance(&self, other: &Point) -> f64 {
         panic!("Not implemented!");
     }
 
-    fn VectorTo(&self, endpoint: &Point) -> Vector {
+    fn vector_to(&self, endpoint: &Point) -> Vector {
         panic!("Not implemented!");
     }
 
-    fn ShiftBy(&self, sift: &Vector) -> Point {
+    fn shift_by(&self, sift: &Vector) -> Point {
+        panic!("Not implemented!");
 
     }
 }
 
 impl Vector {
-    fn Add(&self, other: &Vector) -> Point {
+    fn add(&self, other: &Vector) -> Point {
         panic!("Not implemented!");
     }
 
-    fn Norm(&self) -> f64 {
+    fn norm(&self) -> f64 {
         panic!("Not implemented!");
     }
 
-    fn MultiplyBy(&self, scalar: f64) {
+    fn multiply_by(&self, scalar: f64) {
         panic!("Not implemented!");
     }
 
-    fn ScalarProduct(&self, other: &Vector) -> f64 {
+    fn scalar_product(&self, other: &Vector) -> f64 {
         panic!("Not implemented!");
     }
 
-    fn VectorProduct(&self, other: &Vector) -> Vector {
+    fn vector_product(&self, other: &Vector) -> Vector {
         panic!("Not implemented!");
     }
 
-    fn Normalize(&mut self) {
+    fn normalize(&mut self) {
         panic!("Not implemented!");
     }
 
-    fn Rotate(&self, axis: &Vector, angle: f64) -> Vector {
+    fn rotate(&self, axis: &Vector, angle: f64) -> Vector {
         // Not needed right now
         panic!("Not implemented!");
     }

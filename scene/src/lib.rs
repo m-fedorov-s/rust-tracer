@@ -1,4 +1,4 @@
-// import geometry???
+use geometry;
 // TODO
 
 struct Material {
@@ -44,5 +44,13 @@ impl Scene {
 
     fn FromFile(filename: str&) -> Scene {
         panic!("Not implemented!");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
     }
 }

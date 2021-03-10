@@ -1,3 +1,5 @@
+mod geometry;
+mod scene;
 
 fn main() {
     let y = {

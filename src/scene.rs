@@ -1,8 +1,5 @@
 #![allow(unused)]
-use crate::geometry::Point;
-use crate::geometry::Triangle;
-use crate::geometry::Ray;
-use geometry;
+use crate::geometry::{Point, Triangle, Ray};
 // TODO
 
 struct Material {

@@ -91,8 +91,8 @@ impl Vector {
 
 #[cfg(test)]
 mod tests {
-    use crate::Vector;
-    use crate::Point;
+    use super::Vector;
+    use super::Point;
 
     #[test]
     fn zero_distance_between_point_and_itself() {

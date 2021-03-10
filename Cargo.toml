@@ -1,6 +1,8 @@
-[workspace]
+[package]
+name = "rust-tracer"
+version = "0.0.0"
+authors = ["Mikhail Fedorov", "Alexander Fedorov"]
+edition = "2018"
+readme = "README.md"
 
-members = [
-    "geometry",
-    "scene",
-]
+[dependencies]

@@ -130,12 +130,51 @@ mod tests {
     }
 
     #[test]
-    fn zero_vector() {
+    fn shift_by_zero_vector() {
         let point = Point(1., 5., 6.);
         let vector = Vector(0., 0., 0.);
         assert_eq!(point.0, point.shift_by(&vector).0);
         assert_eq!(point.1, point.shift_by(&vector).1);
         assert_eq!(point.2, point.shift_by(&vector).2);
         assert_eq!(0., vector.norm());
+    }
+
+    #[test]
+    fn normalizing_vector() {
+        let vector = Vector(1., 3., 7.);
+        assert_eq!(1., vector.normalize().norm());
+    }
+
+    #[test]
+    #[should_panic]
+    fn normalizing_zero_vector() {
+        let zero_vector = Vector(0., 0., 0.);
+        zero_vector.normalize();
+    }
+
+    #[test]
+    fn vector_product_for_standard_basis() {
+        let a_vector = Vector(1., 0., 0.);
+        let b_vector = Vector(0., 1., 0.);
+        let product = a_vector.vector_product(&b_vector);
+        assert_eq!(0., product.0);
+        assert_eq!(0., product.1);
+        assert_eq!(1., product.2);
+    }
+
+    #[test]
+    fn vector_product_is_orthogonal() {
+        let a_vector = Vector(0., 2., 5.);
+        let b_vector = Vector(1., -4., 12.);
+        let product = a_vector.vector_product(&b_vector);
+        assert_eq!(0., product.scalar_product(&a_vector));
+        assert_eq!(0., product.scalar_product(&b_vector));
+    }
+
+    #[test]
+    fn vector_product_with_zero_vector() {
+        let zero_vector = Vector(0., 0., 0.);
+        let vector = Vector(-4., 2., 9.);
+        assert_eq!(0., zero_vector.vector_product(&vector).norm());
     }
 }

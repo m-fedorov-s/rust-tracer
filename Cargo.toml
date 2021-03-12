@@ -6,3 +6,4 @@ edition = "2018"
 readme = "README.md"
 
 [dependencies]
+png = "0.16.8"

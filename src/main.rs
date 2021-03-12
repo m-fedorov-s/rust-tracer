@@ -1,4 +1,5 @@
 mod geometry;
+mod image;
 mod scene;
 
 fn main() {

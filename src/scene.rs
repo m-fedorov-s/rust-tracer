@@ -1,16 +1,15 @@
 #![allow(unused)]
-use crate::geometry::{Point, Triangle, Ray};
+use crate::geometry::{Point, Ray, Triangle};
 // TODO
 
 struct Material {
     spectral: (f64, f64, f64),
-    diffuse: (f64, f64, f64)
-    // So on ...
+    diffuse: (f64, f64, f64), // So on ...
 }
 
 struct LightSource {
     place: Point,
-    saturation: (f64, f64, f64)
+    saturation: (f64, f64, f64),
 }
 
 enum Object {
@@ -32,7 +31,7 @@ impl Object {
 
 struct Scene {
     // vector of Object's
-    // vector of LightSource's
+// vector of LightSource's
 }
 
 impl Scene {

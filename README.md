@@ -9,3 +9,5 @@ You may install Rust and cargo with the following command in your terminal (Linu
 You may run tests by
 
     $ cargo test
+
+Don' t forget run `cargo fmt` before creating merge request.

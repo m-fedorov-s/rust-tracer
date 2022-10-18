@@ -145,6 +145,21 @@ mod tests {
     }
 
     #[test]
+    fn vector_norm() {
+        let vectors_norms_pairs = vec![
+            (Vector(0., 0., 0.), 0.),
+            (Vector(0., 0., 7.), 7.),
+            (Vector(1., 0., 0.), 1.),
+            (Vector(0., 3., 0.), 3.),
+            (Vector(4., 3., 0.), 5.),
+            (Vector(14., 2., 5.), 15.),
+        ];
+        for (vector, expected_norm) in vectors_norms_pairs {
+            assert_eq!(vector.norm(), expected_norm);
+        }
+    }
+
+    #[test]
     fn normalizing_vector() {
         let vector = Vector(1., 3., 7.);
         assert_eq!(1., vector.normalize().norm());

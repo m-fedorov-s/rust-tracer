@@ -31,11 +31,11 @@ impl Object {
 
 struct Scene {
     // vector of Object's
-// vector of LightSource's
+    // vector of LightSource's
 }
 
 impl Scene {
-    fn intersects(&self, ray: &Ray) -> Option<Point> // beter Option<f64> - distance&
+    fn intersects(&self, ray: &Ray) -> Option<Point> // better Option<f64> - distance&
     {
         panic!("Not implemented!");
     }

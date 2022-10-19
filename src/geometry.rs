@@ -1,9 +1,14 @@
 #![allow(unused)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Point(f64, f64, f64);
-struct Vector(f64, f64, f64);
 
+#[derive(Debug, PartialEq)]
+pub struct Vector(f64, f64, f64);
+
+#[derive(Debug, PartialEq)]
 pub struct Triangle {} //??tree points?
+
+#[derive(Debug, PartialEq)]
 pub struct Ray {} // ?Two points, point and a vector??
 
 impl Point {
@@ -49,8 +54,11 @@ impl Vector {
         )
     }
 
-    fn normalize(&mut self) -> Vector {
+    fn normalize(&self) -> Vector {
         let norm = self.norm();
+        if norm == 0.0 {
+            panic!("Normalizing zero vector!")
+        }
         Vector(self.0 / norm, self.1 / norm, self.2 / norm)
     }
 
@@ -75,7 +83,7 @@ impl Vector {
 // Чтобы правильно рассчитывать освещенность в точке, нужно считать нормаль в этой точке.
 // Кроме того, чтобы поддерживать текстуры необходимо рассчитывать барацентрические
 // координаты точки в треугольнике, а для каждой вершины треугольника помнить координаты
-// этой верщины в текстуре. Кроме того, для улучшения качества нужно помнить нормали в
+// этой вершины в текстуре. Кроме того, для улучшения качества нужно помнить нормали в
 // каждой вершине, и рассчитывать нормаль в точке как взвешенную сумму нормалей в
 // вершинах, с весами, равными барацентрическим координатам.
 
@@ -133,10 +141,22 @@ mod tests {
     fn shift_by_zero_vector() {
         let point = Point(1., 5., 6.);
         let vector = Vector(0., 0., 0.);
-        assert_eq!(point.0, point.shift_by(&vector).0);
-        assert_eq!(point.1, point.shift_by(&vector).1);
-        assert_eq!(point.2, point.shift_by(&vector).2);
-        assert_eq!(0., vector.norm());
+        assert_eq!(point, point.shift_by(&vector));
+    }
+
+    #[test]
+    fn vector_norm() {
+        let vectors_norms_pairs = vec![
+            (Vector(0., 0., 0.), 0.),
+            (Vector(0., 0., 7.), 7.),
+            (Vector(1., 0., 0.), 1.),
+            (Vector(0., 3., 0.), 3.),
+            (Vector(4., 3., 0.), 5.),
+            (Vector(14., 2., 5.), 15.),
+        ];
+        for (vector, expected_norm) in vectors_norms_pairs {
+            assert_eq!(vector.norm(), expected_norm);
+        }
     }
 
     #[test]
@@ -149,7 +169,8 @@ mod tests {
     #[should_panic]
     fn normalizing_zero_vector() {
         let zero_vector = Vector(0., 0., 0.);
-        zero_vector.normalize();
+        let other = zero_vector.normalize();
+        print!("{other:?}")
     }
 
     #[test]
@@ -157,9 +178,7 @@ mod tests {
         let a_vector = Vector(1., 0., 0.);
         let b_vector = Vector(0., 1., 0.);
         let product = a_vector.vector_product(&b_vector);
-        assert_eq!(0., product.0);
-        assert_eq!(0., product.1);
-        assert_eq!(1., product.2);
+        assert_eq!(Vector(0.0, 0.0, 1.0), product);
     }
 
     #[test]

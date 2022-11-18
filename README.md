@@ -1,3 +1,4 @@
+[![Rust](https://github.com/m-fedorov-s/rust-tracer/actions/workflows/rust.yml/badge.svg)](https://github.com/m-fedorov-s/rust-tracer/actions/workflows/rust.yml)
 # rust-tracer
 
 Use `cargo` to build and run this project. 

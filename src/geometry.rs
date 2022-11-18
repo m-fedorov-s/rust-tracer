@@ -42,12 +42,12 @@ impl Point {
 So we can write
 let a = Point(...);
 let b = Point(...);
-let v: Vector = a - &b;
+let v: Vector = &a - &b;
 */
-impl std::ops::Sub<&Point> for Point {
+impl<'a, 'b> std::ops::Sub<&'a Point> for &'b Point {
     type Output = Vector;
 
-    fn sub(self, other: &Self) -> Vector {
+    fn sub(self: &'b Point, other: &'a Point) -> Self::Output {
         Vector(self.0 - other.0, self.1 - other.1, self.2 - other.2)
     }
 }
@@ -58,18 +58,18 @@ let a = Point(...);
 let v = Vector(...);
 let b: Point = a + &v;
 */
-impl std::ops::Add<&Vector> for Point {
-    type Output = Self;
+impl std::ops::Add<&Vector> for &Point {
+    type Output = Point;
 
-    fn add(self, other: &Vector) -> Self {
-        Self(self.0 + other.0, self.1 + other.1, self.2 + other.2)
+    fn add(self, other: &Vector) -> Self::Output {
+        Point(self.0 + other.0, self.1 + other.1, self.2 + other.2)
     }
 }
 
 impl std::ops::Add<&Vector> for &Vector {
     type Output = Vector;
 
-    fn add(self, other: &Vector) -> Vector {
+    fn add(self, other: &Vector) -> Self::Output {
         Vector(self.0 + other.0, self.1 + other.1, self.2 + other.2)
     }
 }
@@ -77,7 +77,7 @@ impl std::ops::Add<&Vector> for &Vector {
 /*
 So we can write
 let v = Vector(...);
-let w = 0.4 * v
+let w = 0.4 * v;
 */
 impl std::ops::Mul<&Vector> for f64 {
     type Output = Vector;
@@ -87,6 +87,11 @@ impl std::ops::Mul<&Vector> for f64 {
     }
 }
 
+/*
+So we can write
+let v = Vector(...);
+let w = v * 0.4;
+*/
 impl std::ops::Mul<f64> for &Vector {
     type Output = Vector;
 
@@ -144,34 +149,18 @@ impl Vector {
 
 impl Triangle {
     fn area(&self) -> f64 {
-        let side_one = self.0 - &self.1;
-        let side_two = self.0 - &self.2;
+        let side_one = &self.0 - &self.1;
+        let side_two = &self.0 - &self.2;
         (side_one.vector_product(&side_two)).norm() / 2.0
     }
 
     fn baracentric_coordinates(&self, point: &Point) -> (f64, f64, f64) {
-        let basic_normale = self.normale(&point).unwrap();
-        let normale_0 = (*point - &self.1).vector_product(&(*point - &self.2));
-        let area_0 = normale_0.norm()
-            * (if normale_0.scalar_product(&basic_normale) < 0.0 {
-                -1.
-            } else {
-                1.
-            });
-        let normale_1 = (*point - &self.2).vector_product(&(*point - &self.0));
-        let area_1 = normale_1.norm()
-            * (if normale_1.scalar_product(&basic_normale) < 0.0 {
-                -1.
-            } else {
-                1.
-            });
-        let normale_2 = (*point - &self.0).vector_product(&(*point - &self.1));
-        let area_2 = normale_2.norm()
-            * (if normale_2.scalar_product(&basic_normale) < 0.0 {
-                -1.
-            } else {
-                1.
-            });
+        let normale_0 = (point - &self.1).vector_product(&(point - &self.2));
+        let area_0 = normale_0.norm();
+        let normale_1 = (point - &self.2).vector_product(&(point - &self.0));
+        let area_1 = normale_1.norm();
+        let normale_2 = (point - &self.0).vector_product(&(point - &self.1));
+        let area_2 = normale_2.norm();
         let sum = area_0 + area_1 + area_2;
         (area_0 / sum, area_1 / sum, area_2 / sum)
     }
@@ -184,8 +173,8 @@ impl GeometricObject for Triangle {
     }
 
     fn normale(&self, point: &Point) -> Option<Vector> {
-        let side_one = self.0 - &self.1;
-        let side_two = self.0 - &self.2;
+        let side_one = &self.0 - &self.1;
+        let side_two = &self.0 - &self.2;
         Some(side_one.vector_product(&side_two).normalize())
     }
 }
@@ -372,22 +361,12 @@ mod tests {
             let b = Point(-3., 2., -5.);
             let c = Point(-5., 0., -5.);
             let triangle = Triangle(a, b, c);
-            let center = a + &(&(&(b - &a) / 3.0_f64) + &(&(c - &a) / 3.0_f64));
+            let center = &a + &(&(&(&b - &a) / 3.0_f64) + &(&(&c - &a) / 3.0_f64));
             let normale = triangle.normale(&center).unwrap();
             assert!((normale.norm() - 1.0).abs() < FLOAT_THRESHOLD);
-            assert!((normale.scalar_product(&(a - &b))).abs() < FLOAT_THRESHOLD);
-            assert!((normale.scalar_product(&(a - &c))).abs() < FLOAT_THRESHOLD);
-            assert!((normale.scalar_product(&(b - &c))).abs() < FLOAT_THRESHOLD);
-        }
-
-        #[test]
-        fn normale_to_point_outside_of_triangle() {
-            let a = Point(4., 2., 6.);
-            let b = Point(-3., 2., -5.);
-            let c = Point(-5., 0., -5.);
-            let triangle = Triangle(a, b, c);
-            let outsider = a + &(b - &a) + &(c - &a);
-            assert_eq!(triangle.normale(&outsider), None);
+            assert!((normale.scalar_product(&(&a - &b))).abs() < FLOAT_THRESHOLD);
+            assert!((normale.scalar_product(&(&a - &c))).abs() < FLOAT_THRESHOLD);
+            assert!((normale.scalar_product(&(&b - &c))).abs() < FLOAT_THRESHOLD);
         }
 
         #[test]
@@ -395,7 +374,7 @@ mod tests {
         fn normale_to_degenerate_triangle() {
             let a = Point(4., 2., 6.);
             let b = Point(-3., 2., -5.);
-            let c = a + &(0.4_f64 * &(a - &b));
+            let c = &a + &(0.4_f64 * &(&a - &b));
             let triangle = Triangle(a, b, c);
             assert_eq!(triangle.normale(&a), None);
         }

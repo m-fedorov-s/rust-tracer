@@ -197,7 +197,7 @@ mod tests {
         #[test]
         fn zero_distance_between_point_and_itself() {
             let point = Point(1., 4., 5.);
-            assert_eq!(point.distance(&point).abs() < FLOAT_THRESHOLD);
+            assert!(point.distance(&point).abs() < FLOAT_THRESHOLD);
         }
 
         #[test]
@@ -351,7 +351,7 @@ mod tests {
                 Triangle(Point(1., -2., 3.), Point(4., 5., -6.), Point(-2., -9., 12.)),
             ];
             for triangle in degenerate_triangles {
-                assert_eq!(triangle.area() >= 0.0 && triangle.area() < FLOAT_THRESHOLD);
+                assert!(triangle.area() >= 0.0 && triangle.area() < FLOAT_THRESHOLD);
             }
         }
 

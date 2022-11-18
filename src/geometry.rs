@@ -17,7 +17,7 @@ const FLOAT_THRESHOLD: f64 = 1e-8;
 pub trait GeometricObject {
     fn intersects(&self, ray: &Ray) -> Option<Point>;
     fn normale(&self, point: &Point) -> Option<Vector>;
-    // If the point does not belong to the object return None
+    // If the point does not belong to the object then the behavior is undefined.
 }
 
 impl Point {
@@ -193,11 +193,11 @@ impl GeometricObject for Triangle {
 mod tests {
 
     mod point {
-        use crate::geometry::Point;
+        use crate::geometry::{Point, FLOAT_THRESHOLD};
         #[test]
         fn zero_distance_between_point_and_itself() {
             let point = Point(1., 4., 5.);
-            assert_eq!(point.distance(&point), 0.0);
+            assert_eq!(point.distance(&point).abs() < FLOAT_THRESHOLD);
         }
 
         #[test]
@@ -351,7 +351,7 @@ mod tests {
                 Triangle(Point(1., -2., 3.), Point(4., 5., -6.), Point(-2., -9., 12.)),
             ];
             for triangle in degenerate_triangles {
-                assert_eq!(0.0, triangle.area());
+                assert_eq!(triangle.area() >= 0.0 && triangle.area() < FLOAT_THRESHOLD);
             }
         }
 

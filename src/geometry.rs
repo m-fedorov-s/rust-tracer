@@ -77,7 +77,7 @@ impl std::ops::Add<&Vector> for &Vector {
 /*
 So we can write
 let v = Vector(...);
-let w = 0.4 * v;
+let w = 0.4 * &v;
 */
 impl std::ops::Mul<&Vector> for f64 {
     type Output = Vector;
@@ -90,7 +90,7 @@ impl std::ops::Mul<&Vector> for f64 {
 /*
 So we can write
 let v = Vector(...);
-let w = v * 0.4;
+let w = &v * 0.4;
 */
 impl std::ops::Mul<f64> for &Vector {
     type Output = Vector;
@@ -100,6 +100,11 @@ impl std::ops::Mul<f64> for &Vector {
     }
 }
 
+/*
+So we can write
+let v = Vector(...);
+let w = &v / 0.4;
+*/
 impl std::ops::Div<f64> for &Vector {
     type Output = Vector;
 

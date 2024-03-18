@@ -7,26 +7,26 @@ use std::io::BufWriter;
 use std::path::Path;
 
 #[derive(Copy, Clone)]
-pub struct RGB(u8, u8, u8);
+pub struct Rgb(u8, u8, u8);
 
 pub struct Image {
-    pixels: Vec<Vec<RGB>>,
+    pixels: Vec<Vec<Rgb>>,
 }
 
 impl Image {
     pub fn new(width: usize, height: usize) -> Image {
-        let mut column: Vec<RGB> = Vec::new();
-        column.resize(height, RGB(255, 255, 255));
-        let mut raw_data: Vec<Vec<RGB>> = Vec::new();
+        let mut column: Vec<Rgb> = Vec::new();
+        column.resize(height, Rgb(255, 255, 255));
+        let mut raw_data: Vec<Vec<Rgb>> = Vec::new();
         raw_data.resize(width, column);
         Image { pixels: raw_data }
     }
 
-    pub fn set_pixel(&mut self, column: usize, row: usize, value: &RGB) {
+    pub fn set_pixel(&mut self, column: usize, row: usize, value: &Rgb) {
         self.pixels[column][row] = *value;
     }
 
-    pub fn get_pixel(&self, column: usize, row: usize) -> RGB {
+    pub fn get_pixel(&self, column: usize, row: usize) -> Rgb {
         self.pixels[column][row]
     }
 

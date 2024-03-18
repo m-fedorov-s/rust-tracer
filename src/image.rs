@@ -7,26 +7,30 @@ use std::io::BufWriter;
 use std::path::Path;
 
 #[derive(Copy, Clone)]
-pub struct RGB(u8, u8, u8);
+pub struct Rgb(u8, u8, u8);
 
-pub struct Image {
-    pixels: Vec<Vec<RGB>>,
+pub struct RgbImage {
+    pixels: Vec<Vec<Rgb>>,
 }
 
-impl Image {
-    pub fn new(width: usize, height: usize) -> Image {
-        let mut column: Vec<RGB> = Vec::new();
-        column.resize(height, RGB(255, 255, 255));
-        let mut raw_data: Vec<Vec<RGB>> = Vec::new();
+pub struct LinearImage {
+    pixels: Vec<Vec<(f64, f64, f64)>>,
+}
+
+impl RgbImage {
+    pub fn new(width: usize, height: usize) -> RgbImage {
+        let mut column: Vec<Rgb> = Vec::new();
+        column.resize(height, Rgb(255, 255, 255));
+        let mut raw_data: Vec<Vec<Rgb>> = Vec::new();
         raw_data.resize(width, column);
-        Image { pixels: raw_data }
+        RgbImage { pixels: raw_data }
     }
 
-    pub fn set_pixel(&mut self, column: usize, row: usize, value: &RGB) {
+    pub fn set_pixel(&mut self, column: usize, row: usize, value: &Rgb) {
         self.pixels[column][row] = *value;
     }
 
-    pub fn get_pixel(&self, column: usize, row: usize) -> RGB {
+    pub fn get_pixel(&self, column: usize, row: usize) -> Rgb {
         self.pixels[column][row]
     }
 
@@ -61,6 +65,29 @@ impl Image {
     }
 }
 
+impl LinearImage {
+    pub fn new(width: usize, height: usize) -> LinearImage {
+        let mut column: Vec<(f64, f64, f64)> = Vec::new();
+        column.resize(height, (0.0, 0.0, 0.0));
+        let mut raw_data: Vec<Vec<(f64, f64, f64)>> = Vec::new();
+        raw_data.resize(width, column);
+        LinearImage { pixels: raw_data }
+    }
+
+    pub fn set_pixel(&mut self, column: usize, row: usize, value: &(f64, f64, f64)) {
+        self.pixels[column][row] = *value;
+    }
+
+    pub fn get_pixel(&self, column: usize, row: usize) -> (f64, f64, f64) {
+        self.pixels[column][row]
+    }
+
+    pub fn convert_to_rgb(&self) -> RgbImage {
+        // TODO Make gamma correction
+        // See https://en.wikipedia.org/wiki/Gamma_correction and https://www.scratchapixel.com/lessons/digital-imaging/digital-images
+        panic!("Not implemented!")
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;

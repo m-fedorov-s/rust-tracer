@@ -21,6 +21,10 @@ pub trait GeometricObject {
 }
 
 impl Point {
+    pub fn new(x: f64, y: f64, z: f64) -> Point {
+        Point(x, y, z)
+    }
+
     fn distance(&self, other: &Point) -> f64 {
         self.vector_to(other).norm()
     }
@@ -114,7 +118,11 @@ impl std::ops::Div<f64> for &Vector {
 }
 
 impl Vector {
-    fn add(&self, other: &Vector) -> Vector {
+    pub fn new(x: f64, y: f64, z: f64) -> Vector {
+        Vector(x, y, z)
+    }
+
+    pub fn add(&self, other: &Vector) -> Vector {
         Vector(self.0 + other.0, self.1 + other.1, self.2 + other.2)
     }
 
@@ -122,7 +130,7 @@ impl Vector {
         (self.0.powi(2) + self.1.powi(2) + self.2.powi(2)).sqrt()
     }
 
-    fn multiply_by(&self, scalar: f64) -> Vector {
+    pub fn multiply_by(&self, scalar: f64) -> Vector {
         Vector(self.0 * scalar, self.1 * scalar, self.2 * scalar)
     }
 
@@ -130,7 +138,7 @@ impl Vector {
         self.0 * other.0 + self.1 * other.1 + self.2 * other.2
     }
 
-    fn vector_product(&self, other: &Vector) -> Vector {
+    pub fn vector_product(&self, other: &Vector) -> Vector {
         Vector(
             self.1 * other.2 - self.2 * other.1,
             self.2 * other.0 - self.0 * other.2,
@@ -138,7 +146,7 @@ impl Vector {
         )
     }
 
-    fn normalize(&self) -> Vector {
+    pub fn normalize(&self) -> Vector {
         let norm = self.norm();
         if norm.abs() < FLOAT_THRESHOLD {
             panic!("Normalizing zero vector!")
@@ -146,7 +154,7 @@ impl Vector {
         Vector(self.0 / norm, self.1 / norm, self.2 / norm)
     }
 
-    fn rotate(&self, axis: &Vector, angle: f64) -> Vector {
+    pub fn rotate(&self, axis: &Vector, angle: f64) -> Vector {
         // Not needed right now
         panic!("Not implemented!");
     }

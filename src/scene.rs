@@ -1,10 +1,9 @@
 #![allow(unused)]
-use crate::geometry::{Point, Ray, Triangle};
-// TODO
+use crate::geometry::{Point, Ray, Triangle, Vector}; // TODO Add Sphere
 
-struct Material {
-    spectral: (f64, f64, f64),
-    diffuse: (f64, f64, f64), // So on ...
+pub struct Material {
+    pub spectral: (f64, f64, f64),
+    pub diffuse: (f64, f64, f64), // So on ...
 }
 
 struct LightSource {
@@ -12,43 +11,40 @@ struct LightSource {
     saturation: (f64, f64, f64),
 }
 
-enum Object {
-    // Objects may be some of geometric figure with a material describing it.
-    Triangle(Material, Triangle),
-    // Sphere(Material, Sphere),
+pub trait MaterialObject {
+    // MaterialObject may be some of geometric figure with a material describing it.
+    fn intersects(&self, ray: &Ray) -> Option<Point>;
+
+    fn material(&self) -> Material;
+
+    fn normale(&self, point: &Point) -> Option<Vector>;
 }
 
-impl Object {
-    fn intersects(&self, ray: &Ray) -> bool // or Point or distance or Option<Point> ?
-    {
-        panic!("Not implemented");
-    }
-
-    fn reflect(&self, ray: &Ray) -> Ray {
-        panic!("Not implemented");
-    }
-}
-
-struct Scene {
+pub struct Scene {
     // vector of Object's
+    objects: Vec<Box<dyn MaterialObject>>,
     // vector of LightSource's
+    lights: Vec<LightSource>,
 }
 
 impl Scene {
-    fn intersects(&self, ray: &Ray) -> Option<Point> // better Option<f64> - distance&
+    pub fn intersects(&self, ray: &Ray) -> Option<(Box<dyn MaterialObject>, Point)> // better Option<f64> - distance?
     {
         panic!("Not implemented!");
     }
 
-    fn from_file(filename: &str) -> Scene {
+    pub fn from_file(filename: &str) -> Scene {
+        panic!("Not implemented!");
+    }
+
+    fn add_object(object: Box<dyn MaterialObject>) {
+        panic!("Not implemented!");
+    }
+
+    fn add_light_source(light: LightSource) {
         panic!("Not implemented!");
     }
 }
 
 #[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+mod tests {}

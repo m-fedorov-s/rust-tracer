@@ -8,7 +8,7 @@ use std::io::BufRead;
 // See https://en.wikipedia.org/wiki/Illumination_model#Illumination_models
 // This may be outdated ?
 #[derive(Debug, Copy, Clone, PartialEq)]
-enum IlluminationModel {
+pub enum IlluminationModel {
     // 0. Color on and Ambient off
     ColorOnly,
     // 1. Color on and Ambient on
@@ -34,14 +34,14 @@ enum IlluminationModel {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-struct Material {
-    ambient: (f64, f64, f64),
-    spectral: (f64, f64, f64),
-    diffuse: (f64, f64, f64),
-    specular_exponent: f64,
-    transparency: f64,
-    optical_density: f64,
-    illumination_model: IlluminationModel,
+pub struct Material {
+    pub ambient: (f64, f64, f64),
+    pub spectral: (f64, f64, f64),
+    pub diffuse: (f64, f64, f64),
+    pub specular_exponent: f64,
+    pub transparency: f64,
+    pub optical_density: f64,
+    pub illumination_model: IlluminationModel,
 }
 
 impl Material {
@@ -63,26 +63,20 @@ struct LightSource {
     saturation: (f64, f64, f64),
 }
 
-enum Object {
-    // Objects may be some of geometric figure with a material describing it.
-    Triangle(Material, Triangle),
-    // Sphere(Material, Sphere),
+pub trait MaterialObject {
+    // MaterialObject may be some of geometric figure with a material describing it.
+    fn intersects(&self, ray: &Ray) -> Option<Point>;
+
+    fn material(&self) -> Material;
+
+    fn normale(&self, point: &Point) -> Option<Vector>;
 }
 
-impl Object {
-    fn intersects(&self, ray: &Ray) -> bool // or Point or distance or Option<Point> ?
-    {
-        panic!("Not implemented");
-    }
-
-    fn reflect(&self, ray: &Ray) -> Ray {
-        panic!("Not implemented");
-    }
-}
-
-struct Scene {
+pub struct Scene {
     // vector of Object's
+    objects: Vec<Box<dyn MaterialObject>>,
     // vector of LightSource's
+    lights: Vec<LightSource>,
 }
 
 fn import_material_file(filename: &str, materials: &mut HashMap<String, Material>) {
@@ -139,14 +133,17 @@ fn import_material_file(filename: &str, materials: &mut HashMap<String, Material
 }
 
 impl Scene {
-    fn intersects(&self, ray: &Ray) -> Option<Point> // better Option<f64> - distance&
+    pub fn intersects(&self, ray: &Ray) -> Option<(Box<dyn MaterialObject>, Point)> // better Option<f64> - distance?
     {
         panic!("Not implemented!");
     }
 
-    fn from_file(filename: &str) -> Scene {
+    pub fn from_file(filename: &str) -> Scene {
         let file = fs::File::open(filename).unwrap();
-        let mut scene = Scene {};
+        let mut scene = Scene{
+            lights: Vec::new(),
+            objects: Vec::new(),
+        };
         let mut materials: HashMap<String, Material> = HashMap::new();
         let mut vertexes: Vec<Box<Point>> = vec![];
         let mut textures_coordinates: Vec<(f64, f64)> = vec![];
@@ -160,24 +157,22 @@ impl Scene {
             let words: Vec<&str> = inputline.split_whitespace().map(|s| s.trim()).collect();
             match words[0] {
                 "v" => {
-                    panic!("Not implemented!");
-                    // vertexes.append(Point::new(
-                    //     words[1].parse().unwrap(),
-                    //     words[2].parse().unwrap(),
-                    //     words[3].parse().unwrap(),
-                    // ));
+                    vertexes.push(Box::new(Point::new(
+                        words[1].parse().unwrap(),
+                        words[2].parse().unwrap(),
+                        words[3].parse().unwrap(),
+                    )));
                 }
                 "vt" => {
                     panic!("Not implemented!");
                     // textures_coordinates.append();
                 }
                 "vn" => {
-                    panic!("Not implemented!");
-                    // normales.append(Vector::new(
-                    //     words[1].parse().unwrap(),
-                    //     words[2].parse().unwrap(),
-                    //     words[3].parse().unwrap(),
-                    // ));
+                    normales.push(Box::new(Vector::new(
+                        words[1].parse().unwrap(),
+                        words[2].parse().unwrap(),
+                        words[3].parse().unwrap(),
+                    )));
                 }
                 "f" => {
                     if current_material.is_none() {
@@ -187,7 +182,7 @@ impl Scene {
                     // let point_a = vertexes[words[1].parse().unwrap()];
                     // let point_b = vertexes[words[2].parse().unwrap()];
                     // for index_c in words.iter().skip(3).map(|i| i.parse().unwrap()) {
-                    //     let triangle = Triangle::new(point_a, point_b, vertexes[index_c])
+                    //     let triangle = Triangle::new(point_a, point_b, vertexes[index_c]);
                     //     scene.add(triangle, current_material);
                     // }
                 }
@@ -204,21 +199,20 @@ impl Scene {
                     // scene.add(Sphere::new(center, words[4].parse().unwrap()), current_material)
                 }
                 "P" => {
-                    panic!("Not implemented!");
-                    // let place = Point::new(
-                    //     words[1].parse().unwrap(),
-                    //     words[2].parse().unwrap(),
-                    //     words[3].parse().unwrap(),
-                    // );
-                    // let source = LightSource {
-                    //     place,
-                    //     saturation: (
-                    //         words[4].parse().unwrap(),
-                    //         words[5].parse().unwrap(),
-                    //         words[6].parse().unwrap(),
-                    //     ),
-                    // };
-                    // scene.add(LightSource());
+                    let place = Point::new(
+                        words[1].parse().unwrap(),
+                        words[2].parse().unwrap(),
+                        words[3].parse().unwrap(),
+                    );
+                    let source = LightSource {
+                        place,
+                        saturation: (
+                            words[4].parse().unwrap(),
+                            words[5].parse().unwrap(),
+                            words[6].parse().unwrap(),
+                        ),
+                    };
+                    scene.lights.push(source);
                 }
                 "mtllib" => {
                     let mtl_filename = words[1];
@@ -237,12 +231,15 @@ impl Scene {
         }
         scene
     }
+
+    fn add_object(object: Box<dyn MaterialObject>) {
+        panic!("Not implemented!");
+    }
+
+    fn add_light_source(light: LightSource) {
+        panic!("Not implemented!");
+    }
 }
 
 #[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+mod tests {}

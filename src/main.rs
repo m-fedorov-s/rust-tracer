@@ -17,7 +17,7 @@ fn main() {
     );
     let mut image = image::LinearImage::new(cam.resolution().0, cam.resolution().1);
     for (position, ray) in cam.generate_rays() {
-        let (object, point) = scene.intersects(&ray).unwrap();
+        let (object, _) = scene.intersects(&ray).unwrap();
         image.set_pixel(position.0, position.1, &object.material().diffuse);
         // TODO Step 1: implement phong model to take in account the light sources.
         // TODO Step 2: implement reflections of the rays.

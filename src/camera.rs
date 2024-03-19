@@ -6,7 +6,7 @@ pub struct Camera {
     camera_up: Vector,
     camera_side: Vector,
     resolution: (usize, usize),
-    focal_length: f32, // in centimeters
+    focal_length: f64,       // in centimeters
     canvas_size: (f32, f32), // in centimeters
 }
 
@@ -39,9 +39,9 @@ impl<'a> Iterator for CameraIter<'a> {
             .add(&self.camera.camera_side.multiply_by(
                 (self.position.1 as f64 - self.camera.resolution.1 as f64 / 2.0) * pixel_size,
             ));
-        // let ray = Ray::from_to(self.camera.from, self.camera.to.multiply_by(self.camera.focal_length) + shift);
-        // return Some(self.position, Ray())
-        panic!("Not implemented!");
+        let ray = Ray::from_to(&self.camera.from, &(&self.camera.to.multiply_by(self.camera.focal_length) + &shift))?;
+        Some((self.position, ray))
+        // panic!("Not implemented!");
     }
 }
 
@@ -51,10 +51,10 @@ impl Camera {
         to: Point,
         rotation: f64,
         dpcm: u32,
-        focal_length: f32,
+        focal_length: f64,
         canvas_size: (f32, f32),
     ) -> Camera {
-        let to_vector = (from - &to).normalize();
+        let to_vector = (&from - &to).normalize();
         let resolution = (
             (canvas_size.0 * dpcm as f32).round() as usize,
             (canvas_size.1 * dpcm as f32).round() as usize,

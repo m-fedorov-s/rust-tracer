@@ -1,15 +1,19 @@
 #![allow(unused)]
 use crate::geometry::{Point, Ray, Triangle, Vector};
 use std::collections::HashMap;
+use std::error;
 use std::fs;
 use std::io;
+use std::fmt;
+use std::num::{ParseFloatError, ParseIntError};
 use std::io::BufRead;
 
 // See https://en.wikipedia.org/wiki/Illumination_model#Illumination_models
 // This may be outdated ?
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub enum IlluminationModel {
     // 0. Color on and Ambient off
+    #[default]
     ColorOnly,
     // 1. Color on and Ambient on
     ColorAndAmbient,
@@ -33,7 +37,7 @@ pub enum IlluminationModel {
     Shadows,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Material {
     pub ambient: (f64, f64, f64),
     pub spectral: (f64, f64, f64),
@@ -42,20 +46,6 @@ pub struct Material {
     pub transparency: f64,
     pub optical_density: f64,
     pub illumination_model: IlluminationModel,
-}
-
-impl Material {
-    fn empty() -> Material {
-        Material {
-            ambient: (0.0, 0.0, 0.0),
-            spectral: (0.0, 0.0, 0.0),
-            diffuse: (0.0, 0.0, 0.0),
-            specular_exponent: (0.0),
-            transparency: 1.0,
-            optical_density: 1.0,
-            illumination_model: IlluminationModel::ReflectionOn,
-        }
-    }
 }
 
 struct LightSource {
@@ -79,10 +69,56 @@ pub struct Scene {
     lights: Vec<LightSource>,
 }
 
-fn import_material_file(filename: &str, materials: &mut HashMap<String, Material>) {
+#[derive(Debug)]
+enum UnderlyingPasingError {
+    IoError(io::Error),
+    ParseIntError(ParseIntError),
+    ParseFloatError(ParseFloatError),
+    Other(String),
+}
+
+#[derive(Debug)]
+struct ParsingError {
+    filename: String,
+    line_number: usize,
+    error: UnderlyingPasingError,
+}
+
+impl fmt::Display for ParsingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "file {} line {}: {:?}",
+            self.filename, self.line_number, self.error
+        )
+    }
+}
+
+impl error::Error for ParsingError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match &self.error {
+            UnderlyingPasingError::IoError(err) => Some(err as &(dyn error::Error + 'static)),
+            UnderlyingPasingError::ParseIntError(err) => Some(err as &(dyn error::Error + 'static)),
+            UnderlyingPasingError::ParseFloatError(err) => Some(err as &(dyn error::Error + 'static)),
+            UnderlyingPasingError::Other(_) => None,
+        }
+    }
+}
+
+impl ParsingError {
+    pub fn from_error(filename: String, line_number: &usize, err: UnderlyingPasingError) -> Self {
+        ParsingError {
+            filename,
+            line_number: *line_number,
+            error: err,
+        }
+    }
+}
+
+fn import_material_file(filename: &str) -> Result<HashMap<String, Material>, ParsingError> {
+    let mut materials: HashMap<String, Material> = HashMap::new();
     let file = fs::File::open(filename).unwrap();
-    let mut current_material = Material::empty();
-    let mut material_name: Option<String> = None;
+    let mut current_material = Default::default();
     for (line_number, inputline) in io::BufReader::new(file)
         .lines()
         .map(|l| l.unwrap())
@@ -93,43 +129,186 @@ fn import_material_file(filename: &str, materials: &mut HashMap<String, Material
             continue;
         }
         let words: Vec<&str> = inputline.split_whitespace().map(|s| s.trim()).collect();
-        match words[0] {
-            "newmtl" => {
-                if let Some(name) = material_name {
-                    materials.insert(name, current_material);
-                    current_material = Material::empty();
+        if words.is_empty() {
+            continue;
+        }
+        match words.first() {
+            Some(token) => match *token {
+                "newmtl" => {
+                    if words.len() < 2 {
+                        return Err(ParsingError {
+                            filename: filename.to_string(),
+                            line_number,
+                            error: UnderlyingPasingError::Other(
+                                "Expected material name after newmtl".to_string(),
+                            ),
+                        });
+                    }
+                    let material_name = words[1].to_string();
+                    current_material = Default::default();
+                    materials.insert(material_name, current_material);
                 }
-                material_name = Some(words[1].to_string());
-            }
-            "Ka" | "Ke" => {}
-            "Kd" => {}
-            "Ks" => {}
-            "Ns" => {}
-            "Ni" => {}
-            "d" => {}
-            "Tr" => {}
-            "illum" => {
-                current_material.illumination_model = match words[1].parse().unwrap() {
-                    0 => IlluminationModel::ColorOnly,
-                    1 => IlluminationModel::ColorAndAmbient,
-                    2 => IlluminationModel::ColorHighlight,
-                    3 => IlluminationModel::ReflectionOn,
-                    4 => IlluminationModel::TransparencyOn,
-                    5 => IlluminationModel::ReflectionFresnel,
-                    6 => IlluminationModel::RefractionAndReflectionOn,
-                    7 => IlluminationModel::RefractionAndReflectionFresnel,
-                    8 => IlluminationModel::ReflectionAndRayTraceOff,
-                    9 => IlluminationModel::TransparencyOnAndRayTraceOff,
-                    10 => IlluminationModel::Shadows,
-                    _ => panic!(
-                        "Unsupported illumination model {} in line {} of file {}",
-                        words[1], line_number, filename
-                    ),
+                "Ka" | "Ke" => {
+                    if words.len() != 4 {
+                        return Err(ParsingError {
+                            filename: filename.to_string(),
+                            line_number,
+                            error: UnderlyingPasingError::Other(format!(
+                                "Expected three coordinates after token `{}`, got {} instead.",
+                                words[0],
+                                words.len() - 1
+                            )),
+                        });
+                    }
+                    current_material.ambient = (
+                        words[1].parse::<f64>().map_err(|e| {
+                            ParsingError::from_error(
+                                filename.to_string(),
+                                &line_number,
+                                UnderlyingPasingError::ParseFloatError(e),
+                            )
+                        })?,
+                        words[2].parse::<f64>().map_err(|e| {
+                            ParsingError::from_error(
+                                filename.to_string(),
+                                &line_number,
+                                UnderlyingPasingError::ParseFloatError(e),
+                            )
+                        })?,
+                        words[3].parse::<f64>().map_err(|e| {
+                            ParsingError::from_error(
+                                filename.to_string(),
+                                &line_number,
+                                UnderlyingPasingError::ParseFloatError(e),
+                            )
+                        })?,
+                    );
                 }
-            }
-            _ => continue,
+                "Kd" => {
+                    current_material.diffuse = (
+                        words[1].parse::<f64>().map_err(|e| {
+                            ParsingError::from_error(
+                                filename.to_string(),
+                                &line_number,
+                                UnderlyingPasingError::ParseFloatError(e),
+                            )
+                        })?,
+                        words[2].parse::<f64>().map_err(|e| {
+                            ParsingError::from_error(
+                                filename.to_string(),
+                                &line_number,
+                                UnderlyingPasingError::ParseFloatError(e),
+                            )
+                        })?,
+                        words[3].parse::<f64>().map_err(|e| {
+                            ParsingError::from_error(
+                                filename.to_string(),
+                                &line_number,
+                                UnderlyingPasingError::ParseFloatError(e),
+                            )
+                        })?,
+                    );
+                }
+                "Ks" => {
+                    current_material.spectral = (
+                        words[1].parse::<f64>().map_err(|e| {
+                            ParsingError::from_error(
+                                filename.to_string(),
+                                &line_number,
+                                UnderlyingPasingError::ParseFloatError(e),
+                            )
+                        })?,
+                        words[2].parse::<f64>().map_err(|e| {
+                            ParsingError::from_error(
+                                filename.to_string(),
+                                &line_number,
+                                UnderlyingPasingError::ParseFloatError(e),
+                            )
+                        })?,
+                        words[3].parse::<f64>().map_err(|e| {
+                            ParsingError::from_error(
+                                filename.to_string(),
+                                &line_number,
+                                UnderlyingPasingError::ParseFloatError(e),
+                            )
+                        })?,
+                    );
+                }
+                "Ns" => {
+                    current_material.specular_exponent = words[1].parse::<f64>().map_err(|e| {
+                        ParsingError::from_error(
+                            filename.to_string(),
+                            &line_number,
+                            UnderlyingPasingError::ParseFloatError(e),
+                        )
+                    })?;
+                }
+                "Ni" => {
+                    current_material.optical_density = words[1].parse::<f64>().map_err(|e| {
+                        ParsingError::from_error(
+                            filename.to_string(),
+                            &line_number,
+                            UnderlyingPasingError::ParseFloatError(e),
+                        )
+                    })?;
+                }
+                "d" => {
+                    current_material.transparency = 1.0
+                        - words[1].parse::<f64>().map_err(|e| {
+                            ParsingError::from_error(
+                                filename.to_string(),
+                                &line_number,
+                                UnderlyingPasingError::ParseFloatError(e),
+                            )
+                        })?;
+                }
+                "Tr" => {
+                    current_material.transparency = words[1].parse::<f64>().map_err(|e| {
+                        ParsingError::from_error(
+                            filename.to_string(),
+                            &line_number,
+                            UnderlyingPasingError::ParseFloatError(e),
+                        )
+                    })?;
+                }
+                "illum" => {
+                    current_material.illumination_model =
+                        match words[1].parse::<i32>().map_err(|e| {
+                            ParsingError::from_error(
+                                filename.to_string(),
+                                &line_number,
+                                UnderlyingPasingError::ParseIntError(e),
+                            )
+                        })? {
+                            0 => IlluminationModel::ColorOnly,
+                            1 => IlluminationModel::ColorAndAmbient,
+                            2 => IlluminationModel::ColorHighlight,
+                            3 => IlluminationModel::ReflectionOn,
+                            4 => IlluminationModel::TransparencyOn,
+                            5 => IlluminationModel::ReflectionFresnel,
+                            6 => IlluminationModel::RefractionAndReflectionOn,
+                            7 => IlluminationModel::RefractionAndReflectionFresnel,
+                            8 => IlluminationModel::ReflectionAndRayTraceOff,
+                            9 => IlluminationModel::TransparencyOnAndRayTraceOff,
+                            10 => IlluminationModel::Shadows,
+                            _ => {
+                                return Err(ParsingError {
+                                    filename: filename.to_string(),
+                                    line_number,
+                                    error: UnderlyingPasingError::Other(format!(
+                                        "Unsupported illumination model {} in line {} of file {}",
+                                        words[1], line_number, filename
+                                    )),
+                                });
+                            }
+                        }
+                }
+                _ => continue,
+            },
+            None => continue,
         }
     }
+    Ok(materials)
 }
 
 impl Scene {
@@ -140,7 +319,7 @@ impl Scene {
 
     pub fn from_file(filename: &str) -> Scene {
         let file = fs::File::open(filename).unwrap();
-        let mut scene = Scene{
+        let mut scene = Scene {
             lights: Vec::new(),
             objects: Vec::new(),
         };
@@ -216,9 +395,13 @@ impl Scene {
                 }
                 "mtllib" => {
                     let mtl_filename = words[1];
-                    import_material_file(mtl_filename, &mut materials);
+                    let result = import_material_file(mtl_filename);
+                    match result {
+                        Ok(new_materials) => materials.extend(new_materials),
+                        Err(err) => println!("Error during importing file: {}", err),
+                    };
                 }
-                "usemtl" => match materials.get(&words[1].to_string()) {
+                "usemtl" => match materials.get(words[1]) {
                     Some(material) => {
                         current_material = Some(*material);
                     }

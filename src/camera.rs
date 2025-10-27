@@ -77,7 +77,7 @@ impl Camera {
         }
     }
 
-    pub fn generate_rays(&self) -> CameraIter {
+    pub fn generate_rays(&self) -> CameraIter<'_> {
         CameraIter {
             camera: self,
             position: (0, 0),

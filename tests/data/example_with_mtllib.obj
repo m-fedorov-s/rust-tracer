@@ -1,0 +1,14 @@
+# Test OBJ file that references a material library
+# Note: mtllib path is relative to where the binary is run from
+
+mtllib tests/data/example.mtl
+
+v 0.0 0.0 0.0
+v 1.0 0.0 0.0
+v 0.0 1.0 0.0
+
+vn 0.0 0.0 1.0
+
+usemtl flatwhite
+
+P 10.0 10.0 10.0 1.0 1.0 1.0

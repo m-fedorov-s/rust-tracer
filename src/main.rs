@@ -6,7 +6,7 @@ mod scene;
 
 fn main() {
     let filename = "scene.obj";
-    let scene = scene::Scene::from_file(filename);
+    let scene = scene::Scene::from_file(filename).expect("Failed to parse input file");
     let cam = camera::Camera::new(
         Point::new(0.0, 0.0, 1.0),
         Point::new(1.0, 1.0, 0.0),

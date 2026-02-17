@@ -1,0 +1,41 @@
+# Test file for Ni (optical density) and d (dissolve) transparency
+newmtl glass
+Ka 0.1 0.1 0.1
+Kd 0.5 0.5 0.5
+Ni 1.5
+d 0.7
+illum 4
+
+# Test all illumination models
+newmtl illum0
+illum 0
+
+newmtl illum1
+illum 1
+
+newmtl illum2
+illum 2
+
+newmtl illum3
+illum 3
+
+newmtl illum4
+illum 4
+
+newmtl illum5
+illum 5
+
+newmtl illum6
+illum 6
+
+newmtl illum7
+illum 7
+
+newmtl illum8
+illum 8
+
+newmtl illum9
+illum 9
+
+newmtl illum10
+illum 10

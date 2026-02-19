@@ -1,13 +1,12 @@
 use crate::geometry::GeometricObject;
-use crate::geometry::{Point, Ray, Vector, Sphere, Triangle};
+use crate::geometry::{Point, Ray, Sphere, Triangle, Vector};
 use std::collections::HashMap;
 use std::error;
+use std::fmt;
 use std::fs;
 use std::io;
-use std::fmt;
-use std::num::{ParseFloatError, ParseIntError};
 use std::io::BufRead;
-
+use std::num::{ParseFloatError, ParseIntError};
 
 // See https://en.wikipedia.org/wiki/Illumination_model#Illumination_models
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
@@ -81,7 +80,7 @@ impl MaterialObject for MaterialObjectImpl {
 
 impl MaterialObjectImpl {
     fn new(m: Material, obj: Box<dyn GeometricObject>) -> Box<dyn MaterialObject> {
-        Box::new(MaterialObjectImpl{
+        Box::new(MaterialObjectImpl {
             material: m,
             object: obj,
         })
@@ -125,7 +124,9 @@ impl error::Error for ParsingError {
         match &self.error {
             UnderlyingPasingError::IoError(err) => Some(err as &(dyn error::Error + 'static)),
             UnderlyingPasingError::ParseIntError(err) => Some(err as &(dyn error::Error + 'static)),
-            UnderlyingPasingError::ParseFloatError(err) => Some(err as &(dyn error::Error + 'static)),
+            UnderlyingPasingError::ParseFloatError(err) => {
+                Some(err as &(dyn error::Error + 'static))
+            }
             UnderlyingPasingError::Other(_) => None,
         }
     }
@@ -156,9 +157,8 @@ impl ParsingError {
 * Lines, starting with '#' are comments, so ignored.
 */
 pub fn import_material_file(filename: &str) -> Result<HashMap<String, Material>, ParsingError> {
-    let file = fs::File::open(filename).map_err(|err| {
-        ParsingError::new(filename, 0, UnderlyingPasingError::IoError(err))
-    })?;
+    let file = fs::File::open(filename)
+        .map_err(|err| ParsingError::new(filename, 0, UnderlyingPasingError::IoError(err)))?;
 
     let mut materials: HashMap<String, Material> = HashMap::new();
     let mut current_material_name = String::new();
@@ -201,7 +201,9 @@ pub fn import_material_file(filename: &str) -> Result<HashMap<String, Material>,
                 })?;
 
                 match token {
-                    "Ka" | "Ke" => material.ambient = parse_triple(&words[1..], filename, line_number)?,
+                    "Ka" | "Ke" => {
+                        material.ambient = parse_triple(&words[1..], filename, line_number)?
+                    }
                     "Kd" => material.diffuse = parse_triple(&words[1..], filename, line_number)?,
                     "Ks" => material.spectral = parse_triple(&words[1..], filename, line_number)?,
                     "Ns" => {
@@ -343,9 +345,9 @@ impl Scene {
         let mut normales: Vec<Box<Vector>> = vec![];
         let mut current_material: Option<Material> = None;
         for (line_number, line_result) in io::BufReader::new(file).lines().enumerate() {
-            let inputline = line_result.map_err(|err|
+            let inputline = line_result.map_err(|err| {
                 ParsingError::new(filename, line_number, UnderlyingPasingError::IoError(err))
-            )?;
+            })?;
             let inputline = inputline.trim();
             if inputline.is_empty() || inputline.starts_with('#') {
                 // Skip comments and empty lines
@@ -354,35 +356,48 @@ impl Scene {
             let words: Vec<&str> = inputline.split_whitespace().map(|s| s.trim()).collect();
             match words[0] {
                 "v" => {
-                    vertexes.push(Box::new(Point::from(
-                        parse_triple(&words[1..], filename, line_number)?
-                    )));
+                    vertexes.push(Box::new(Point::from(parse_triple(
+                        &words[1..],
+                        filename,
+                        line_number,
+                    )?)));
                 }
                 "vt" => {
                     textures_coordinates.push((0.0, 0.0));
                     panic!("Not implemented!");
                 }
                 "vn" => {
-                    normales.push(Box::new(Vector::from(
-                        parse_triple(&words[1..], filename, line_number)?
-                    )));
+                    normales.push(Box::new(Vector::from(parse_triple(
+                        &words[1..],
+                        filename,
+                        line_number,
+                    )?)));
                 }
                 "f" => {
-                    let material = current_material.ok_or_else(||
-                        ParsingError::new(filename, line_number, UnderlyingPasingError::Other("Material is not set!".into()))
-                    )?;
+                    let material = current_material.ok_or_else(|| {
+                        ParsingError::new(
+                            filename,
+                            line_number,
+                            UnderlyingPasingError::Other("Material is not set!".into()),
+                        )
+                    })?;
                     let point_a = &vertexes[words[1].parse::<usize>().unwrap()];
                     let mut point_b = &vertexes[words[2].parse::<usize>().unwrap()];
                     for index_c in words.iter().skip(3).map(|i| i.parse::<usize>().unwrap()) {
-                        let triangle = Box::new(Triangle::new(**point_a, **point_b, *vertexes[index_c]));
+                        let triangle =
+                            Box::new(Triangle::new(**point_a, **point_b, *vertexes[index_c]));
                         scene.add_object(MaterialObjectImpl::new(material, triangle));
                         point_b = &vertexes[index_c];
                     }
                 }
                 "S" => {
-                    let material = current_material.ok_or_else(||
-                        ParsingError::new(filename, line_number, UnderlyingPasingError::Other("Material is not set!".into()))
-                    )?;
+                    let material = current_material.ok_or_else(|| {
+                        ParsingError::new(
+                            filename,
+                            line_number,
+                            UnderlyingPasingError::Other("Material is not set!".into()),
+                        )
+                    })?;
                     let center = Point::from(parse_triple(&words[1..4], filename, line_number)?);
                     let raw_object = Box::new(Sphere::new(
                         center,

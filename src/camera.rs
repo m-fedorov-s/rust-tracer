@@ -39,7 +39,10 @@ impl<'a> Iterator for CameraIter<'a> {
             .add(&self.camera.camera_side.multiply_by(
                 (self.position.1 as f64 - self.camera.resolution.1 as f64 / 2.0) * pixel_size,
             ));
-        let ray = Ray::from_to(&self.camera.from, &(&self.camera.to.multiply_by(self.camera.focal_length) + &shift))?;
+        let ray = Ray::from_to(
+            &self.camera.from,
+            &(&self.camera.to.multiply_by(self.camera.focal_length) + &shift),
+        )?;
         Some((self.position, ray))
         // panic!("Not implemented!");
     }

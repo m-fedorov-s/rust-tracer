@@ -222,11 +222,8 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn new (center: Point, radius: f64) -> Sphere {
-        Sphere{
-            center,
-            radius,
-        }
+    pub fn new(center: Point, radius: f64) -> Sphere {
+        Sphere { center, radius }
     }
 }
 
@@ -238,12 +235,11 @@ impl GeometricObject for Sphere {
 
     fn normale(&self, point: &Point) -> Option<Vector> {
         if (*point == self.center) {
-            return None
+            return None;
         }
         Some((point - &self.center).normalize())
     }
 }
-
 
 // Хотим поддержку шариков ведь, так?)
 

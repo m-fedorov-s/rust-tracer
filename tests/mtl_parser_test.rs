@@ -1,7 +1,6 @@
 use rstest::rstest;
 use rust_tracer::scene::{
-    import_material_file, IlluminationModel, Material, ParsingError, Scene,
-    UnderlyingPasingError,
+    import_material_file, IlluminationModel, Material, ParsingError, Scene, UnderlyingPasingError,
 };
 
 // =============================================================================
@@ -17,25 +16,40 @@ fn parse_valid_full_mtl() {
     assert_eq!(materials.len(), 3, "Expected 3 materials");
 
     // Verify flatwhite material
-    let flatwhite = materials.get("flatwhite").expect("flatwhite material not found");
+    let flatwhite = materials
+        .get("flatwhite")
+        .expect("flatwhite material not found");
     assert_eq!(flatwhite.ambient, (0.5, 0.5, 0.5));
     assert_eq!(flatwhite.diffuse, (1.0, 1.0, 1.0));
-    assert_eq!(flatwhite.illumination_model, IlluminationModel::ColorAndAmbient);
+    assert_eq!(
+        flatwhite.illumination_model,
+        IlluminationModel::ColorAndAmbient
+    );
 
     // Verify shinyred material
-    let shinyred = materials.get("shinyred").expect("shinyred material not found");
+    let shinyred = materials
+        .get("shinyred")
+        .expect("shinyred material not found");
     assert_eq!(shinyred.ambient, (0.1985, 0.0, 0.0));
     assert_eq!(shinyred.diffuse, (0.5921, 0.0167, 0.0));
     assert_eq!(shinyred.spectral, (0.5973, 0.2083, 0.2083));
     assert_eq!(shinyred.specular_exponent, 100.2235);
-    assert_eq!(shinyred.illumination_model, IlluminationModel::ColorHighlight);
+    assert_eq!(
+        shinyred.illumination_model,
+        IlluminationModel::ColorHighlight
+    );
 
     // Verify clearblue material
-    let clearblue = materials.get("clearblue").expect("clearblue material not found");
+    let clearblue = materials
+        .get("clearblue")
+        .expect("clearblue material not found");
     assert_eq!(clearblue.ambient, (0.0394, 0.0394, 0.33));
     assert_eq!(clearblue.diffuse, (0.142, 0.142, 0.95));
     assert_eq!(clearblue.transparency, 0.43);
-    assert_eq!(clearblue.illumination_model, IlluminationModel::ColorAndAmbient);
+    assert_eq!(
+        clearblue.illumination_model,
+        IlluminationModel::ColorAndAmbient
+    );
 }
 
 #[test]
@@ -69,7 +83,9 @@ fn parse_illumination_models(#[case] model_num: i32, #[case] expected: Illuminat
 
     let materials = result.unwrap();
     let material_name = format!("illum{}", model_num);
-    let material = materials.get(&material_name).expect(&format!("{} material not found", material_name));
+    let material = materials
+        .get(&material_name)
+        .expect(&format!("{} material not found", material_name));
 
     assert_eq!(material.illumination_model, expected);
 }
@@ -85,7 +101,11 @@ fn parse_comments_ignored() {
     assert!(result.is_ok());
 
     let materials = result.unwrap();
-    assert_eq!(materials.len(), 0, "Expected empty map for comments-only file");
+    assert_eq!(
+        materials.len(),
+        0,
+        "Expected empty map for comments-only file"
+    );
 
     // Cleanup
     let _ = std::fs::remove_file(&temp_path);
@@ -117,7 +137,11 @@ fn parse_whitespace_only_file() {
     assert!(result.is_ok());
 
     let materials = result.unwrap();
-    assert_eq!(materials.len(), 0, "Expected empty map for whitespace-only file");
+    assert_eq!(
+        materials.len(),
+        0,
+        "Expected empty map for whitespace-only file"
+    );
 
     // Cleanup
     let _ = std::fs::remove_file(&temp_path);
@@ -133,7 +157,9 @@ fn material_default_values() {
     assert!(result.is_ok());
 
     let materials = result.unwrap();
-    let mat = materials.get("default_material").expect("Material not found");
+    let mat = materials
+        .get("default_material")
+        .expect("Material not found");
 
     // Check default values match Material::default()
     let default_mat: Material = Default::default();
@@ -168,7 +194,11 @@ Ka 0.9 0.9 0.9
     assert_eq!(materials.len(), 1, "Expected only one material");
 
     let mat = materials.get("mymat").expect("Material not found");
-    assert_eq!(mat.ambient, (0.9, 0.9, 0.9), "Expected last definition to win");
+    assert_eq!(
+        mat.ambient,
+        (0.9, 0.9, 0.9),
+        "Expected last definition to win"
+    );
 
     // Cleanup
     let _ = std::fs::remove_file(&temp_path);
@@ -231,7 +261,7 @@ fn error_newmtl_no_name() {
 }
 
 #[rstest]
-#[case("Ka 0.5 0.5", 2)]      // Too few args
+#[case("Ka 0.5 0.5", 2)] // Too few args
 #[case("Ka 0.5 0.5 0.5 0.5", 4)] // Too many args
 fn error_ka_wrong_arg_count(#[case] line: &str, #[case] arg_count: usize) {
     let content = format!("newmtl test\n{}\n", line);
@@ -378,14 +408,26 @@ fn parsing_error_source() {
     assert!(err.source().is_some());
 
     let parse_float_err = "not a number".parse::<f64>().unwrap_err();
-    let err = ParsingError::new("test.mtl", 1, UnderlyingPasingError::ParseFloatError(parse_float_err));
+    let err = ParsingError::new(
+        "test.mtl",
+        1,
+        UnderlyingPasingError::ParseFloatError(parse_float_err),
+    );
     assert!(err.source().is_some());
 
     let parse_int_err = "not a number".parse::<i32>().unwrap_err();
-    let err = ParsingError::new("test.mtl", 1, UnderlyingPasingError::ParseIntError(parse_int_err));
+    let err = ParsingError::new(
+        "test.mtl",
+        1,
+        UnderlyingPasingError::ParseIntError(parse_int_err),
+    );
     assert!(err.source().is_some());
 
-    let err = ParsingError::new("test.mtl", 1, UnderlyingPasingError::Other("test".to_string()));
+    let err = ParsingError::new(
+        "test.mtl",
+        1,
+        UnderlyingPasingError::Other("test".to_string()),
+    );
     assert!(err.source().is_none());
 }
 

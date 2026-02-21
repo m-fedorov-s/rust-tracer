@@ -1,12 +1,12 @@
 use crate::geometry::GeometricObject;
 use crate::geometry::{Point, Ray, Sphere, Triangle, Vector};
 use std::collections::HashMap;
-use std::error;
 use std::fmt;
 use std::fs;
 use std::io;
 use std::io::BufRead;
 use std::num::{ParseFloatError, ParseIntError};
+use std::{error, str};
 
 // See https://en.wikipedia.org/wiki/Illumination_model#Illumination_models
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
@@ -47,6 +47,23 @@ pub struct Material {
     pub illumination_model: IlluminationModel,
 }
 
+// Returns a sensible default gray material used when an OBJ face/sphere
+// references no material. OBJ files may omit usemtl for some geometry,
+// so we fall back to a neutral gray instead of treating that as an error.
+fn default_gray_material() -> Material {
+    Material {
+        // modest ambient + diffuse gray
+        ambient: (0.25, 0.25, 0.25),
+        diffuse: (0.5, 0.5, 0.5),
+        // no spectral/specular color by default
+        spectral: (0.0, 0.0, 0.0),
+        specular_exponent: 10.0,
+        transparency: 0.0,
+        optical_density: 1.0,
+        illumination_model: IlluminationModel::ColorOnly,
+    }
+}
+
 struct LightSource {
     place: Point,
     saturation: (f64, f64, f64),
@@ -79,11 +96,11 @@ impl MaterialObject for MaterialObjectImpl {
 }
 
 impl MaterialObjectImpl {
-    fn new(m: Material, obj: Box<dyn GeometricObject>) -> Box<dyn MaterialObject> {
-        Box::new(MaterialObjectImpl {
+    fn new(m: Material, obj: Box<dyn GeometricObject>) -> MaterialObjectImpl {
+        MaterialObjectImpl {
             material: m,
             object: obj,
-        })
+        }
     }
 }
 
@@ -94,12 +111,46 @@ pub struct Scene {
     lights: Vec<LightSource>,
 }
 
+impl fmt::Debug for Scene {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "Scene: {} objects and {} lights",
+            self.objects.len(),
+            self.lights.len()
+        )
+    }
+}
+
 #[derive(Debug)]
 pub enum UnderlyingPasingError {
     IoError(io::Error),
     ParseIntError(ParseIntError),
     ParseFloatError(ParseFloatError),
     Other(String),
+}
+
+impl fmt::Display for UnderlyingPasingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UnderlyingPasingError::IoError(err) => write!(f, "IoError: {}", err),
+            UnderlyingPasingError::ParseIntError(err) => write!(f, "ParseIntError: {}", err),
+            UnderlyingPasingError::ParseFloatError(err) => write!(f, "ParseFloatError: {}", err),
+            UnderlyingPasingError::Other(msg) => write!(f, "{}", msg),
+        }
+    }
+}
+
+impl From<ParseFloatError> for UnderlyingPasingError {
+    fn from(err: ParseFloatError) -> Self {
+        UnderlyingPasingError::ParseFloatError(err)
+    }
+}
+
+impl From<ParseIntError> for UnderlyingPasingError {
+    fn from(err: ParseIntError) -> Self {
+        UnderlyingPasingError::ParseIntError(err)
+    }
 }
 
 #[derive(Debug)]
@@ -113,7 +164,7 @@ impl fmt::Display for ParsingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "file {} line {}: {:?}",
+            "file \"{}\" at line {}: {}",
             self.filename, self.line_number, self.error
         )
     }
@@ -207,16 +258,21 @@ pub fn import_material_file(filename: &str) -> Result<HashMap<String, Material>,
                     "Kd" => material.diffuse = parse_triple(&words[1..], filename, line_number)?,
                     "Ks" => material.spectral = parse_triple(&words[1..], filename, line_number)?,
                     "Ns" => {
-                        material.specular_exponent = parse_f64(words.get(1), filename, line_number)?
+                        material.specular_exponent =
+                            parse_number::<f64>(words.get(1), filename, line_number)?
                     }
                     "Ni" => {
-                        material.optical_density = parse_f64(words.get(1), filename, line_number)?
+                        material.optical_density =
+                            parse_number::<f64>(words.get(1), filename, line_number)?
                     }
                     "d" => {
                         material.transparency =
-                            1.0 - parse_f64(words.get(1), filename, line_number)?
+                            1.0 - parse_number::<f64>(words.get(1), filename, line_number)?
                     }
-                    "Tr" => material.transparency = parse_f64(words.get(1), filename, line_number)?,
+                    "Tr" => {
+                        material.transparency =
+                            parse_number::<f64>(words.get(1), filename, line_number)?
+                    }
                     "illum" => {
                         material.illumination_model =
                             parse_illumination_model(words.get(1), filename, line_number)?
@@ -230,27 +286,27 @@ pub fn import_material_file(filename: &str) -> Result<HashMap<String, Material>,
     Ok(materials)
 }
 
-fn parse_f64(
+fn parse_number<N: str::FromStr>(
     value: Option<&&str>,
     filename: &str,
     line_number: usize,
-) -> Result<f64, ParsingError> {
+) -> Result<N, ParsingError>
+where
+    UnderlyingPasingError: From<<N as str::FromStr>::Err>,
+{
     value
         .ok_or_else(|| {
             ParsingError::new(
                 filename,
                 line_number,
-                UnderlyingPasingError::Other("Expected float value".into()),
+                UnderlyingPasingError::Other(format!(
+                    "Expected value of type {}",
+                    std::any::type_name::<N>()
+                )),
             )
         })?
-        .parse::<f64>()
-        .map_err(|e| {
-            ParsingError::new(
-                filename,
-                line_number,
-                UnderlyingPasingError::ParseFloatError(e),
-            )
-        })
+        .parse::<N>()
+        .map_err(|e| ParsingError::new(filename, line_number, e.into()))
 }
 
 fn parse_triple(
@@ -268,9 +324,9 @@ fn parse_triple(
             )),
         ));
     }
-    let r = parse_f64(Some(&words[0]), filename, line_number)?;
-    let g = parse_f64(Some(&words[1]), filename, line_number)?;
-    let b = parse_f64(Some(&words[2]), filename, line_number)?;
+    let r = parse_number::<f64>(Some(&words[0]), filename, line_number)?;
+    let g = parse_number::<f64>(Some(&words[1]), filename, line_number)?;
+    let b = parse_number::<f64>(Some(&words[2]), filename, line_number)?;
     Ok((r, g, b))
 }
 
@@ -279,22 +335,7 @@ fn parse_illumination_model(
     filename: &str,
     line_number: usize,
 ) -> Result<IlluminationModel, ParsingError> {
-    let val = value
-        .ok_or_else(|| {
-            ParsingError::new(
-                filename,
-                line_number,
-                UnderlyingPasingError::Other("Expected illumination model index".into()),
-            )
-        })?
-        .parse::<i32>()
-        .map_err(|e| {
-            ParsingError::new(
-                filename,
-                line_number,
-                UnderlyingPasingError::ParseIntError(e),
-            )
-        })?;
+    let val = parse_number::<i32>(value, filename, line_number)?;
 
     match val {
         0 => Ok(IlluminationModel::ColorOnly),
@@ -324,8 +365,8 @@ impl Scene {
     {
         for object in &self.objects {
             let point = object.intersects(ray);
-            if point.is_some() {
-                if object.normale(&point.unwrap()).is_some() {
+            if let Some(point) = point {
+                if object.normale(&point).is_some() {
                     break;
                 }
             }
@@ -334,16 +375,17 @@ impl Scene {
     }
 
     pub fn from_file(filename: &str) -> Result<Scene, ParsingError> {
-        let file = fs::File::open(filename).unwrap();
+        let file = fs::File::open(filename)
+            .map_err(|err| ParsingError::new(filename, 0, UnderlyingPasingError::IoError(err)))?;
         let mut scene = Scene {
             lights: Vec::new(),
             objects: Vec::new(),
         };
         let mut materials: HashMap<String, Material> = HashMap::new();
-        let mut vertexes: Vec<Box<Point>> = vec![];
-        let mut textures_coordinates: Vec<(f64, f64)> = vec![];
+        let mut vertexes: Vec<Point> = vec![];
+        let mut textures_coordinates: Vec<(f64, f64, f64)> = vec![];
         let mut normales: Vec<Box<Vector>> = vec![];
-        let mut current_material: Option<Material> = None;
+        let mut current_material: Material = default_gray_material();
         for (line_number, line_result) in io::BufReader::new(file).lines().enumerate() {
             let inputline = line_result.map_err(|err| {
                 ParsingError::new(filename, line_number, UnderlyingPasingError::IoError(err))
@@ -356,15 +398,18 @@ impl Scene {
             let words: Vec<&str> = inputline.split_whitespace().map(|s| s.trim()).collect();
             match words[0] {
                 "v" => {
-                    vertexes.push(Box::new(Point::from(parse_triple(
+                    vertexes.push(Point::from(parse_triple(
                         &words[1..],
                         filename,
                         line_number,
-                    )?)));
+                    )?));
                 }
                 "vt" => {
-                    textures_coordinates.push((0.0, 0.0));
-                    panic!("Not implemented!");
+                    textures_coordinates.push((
+                        parse_number::<f64>(words.get(1), filename, line_number)?,
+                        parse_number::<f64>(words.get(2), filename, line_number).unwrap_or(0.),
+                        parse_number::<f64>(words.get(3), filename, line_number).unwrap_or(0.),
+                    ));
                 }
                 "vn" => {
                     normales.push(Box::new(Vector::from(parse_triple(
@@ -374,70 +419,88 @@ impl Scene {
                     )?)));
                 }
                 "f" => {
-                    let material = current_material.ok_or_else(|| {
-                        ParsingError::new(
+                    let a_idx = parse_number::<i32>(words.get(1), filename, line_number)?;
+                    let b_idx = parse_number::<i32>(words.get(2), filename, line_number)?;
+                    if a_idx < 1 || a_idx > vertexes.len() as i32 {
+                        return Err(ParsingError::new(
                             filename,
                             line_number,
-                            UnderlyingPasingError::Other("Material is not set!".into()),
-                        )
-                    })?;
-                    let point_a = &vertexes[words[1].parse::<usize>().unwrap()];
-                    let mut point_b = &vertexes[words[2].parse::<usize>().unwrap()];
-                    for index_c in words.iter().skip(3).map(|i| i.parse::<usize>().unwrap()) {
-                        let triangle =
-                            Box::new(Triangle::new(**point_a, **point_b, *vertexes[index_c]));
-                        scene.add_object(MaterialObjectImpl::new(material, triangle));
-                        point_b = &vertexes[index_c];
+                            UnderlyingPasingError::Other(format!(
+                                "Vertex index {} is out of range",
+                                a_idx
+                            )),
+                        ));
+                    }
+                    let point_a = &vertexes[(a_idx - 1) as usize];
+                    let mut point_b = &vertexes[(b_idx - 1) as usize];
+                    for index_c in words
+                        .iter()
+                        .skip(3)
+                        .map(|i| parse_number::<i32>(Some(i), filename, line_number))
+                    {
+                        let index_c = index_c?;
+                        if index_c < 1 || index_c > vertexes.len() as i32 {
+                            return Err(ParsingError::new(
+                                filename,
+                                line_number,
+                                UnderlyingPasingError::Other(format!(
+                                    "Vertex index {} is out of range",
+                                    a_idx
+                                )),
+                            ));
+                        }
+                        let triangle = Box::new(Triangle::new(
+                            *point_a,
+                            *point_b,
+                            vertexes[(index_c - 1) as usize],
+                        ));
+                        scene.add_object(Box::new(MaterialObjectImpl::new(
+                            current_material,
+                            triangle,
+                        )));
+                        point_b = &vertexes[(index_c - 1) as usize];
                     }
                 }
                 "S" => {
-                    let material = current_material.ok_or_else(|| {
-                        ParsingError::new(
-                            filename,
-                            line_number,
-                            UnderlyingPasingError::Other("Material is not set!".into()),
-                        )
-                    })?;
                     let center = Point::from(parse_triple(&words[1..4], filename, line_number)?);
                     let raw_object = Box::new(Sphere::new(
                         center,
-                        parse_f64(words.get(4), filename, line_number)?,
+                        parse_number::<f64>(words.get(4), filename, line_number)?,
                     ));
 
-                    scene.add_object(MaterialObjectImpl::new(material, raw_object));
+                    scene.add_object(Box::new(MaterialObjectImpl::new(
+                        current_material,
+                        raw_object,
+                    )));
                 }
                 "P" => {
-                    let place = Point::new(
-                        words[1].parse().unwrap(),
-                        words[2].parse().unwrap(),
-                        words[3].parse().unwrap(),
-                    );
+                    let place = Point::from(parse_triple(&words[1..4], filename, line_number)?);
                     let source = LightSource {
                         place,
-                        saturation: (
-                            words[4].parse().unwrap(),
-                            words[5].parse().unwrap(),
-                            words[6].parse().unwrap(),
-                        ),
+                        saturation: parse_triple(&words[4..], filename, line_number)?,
                     };
                     scene.add_light_source(source);
                 }
                 "mtllib" => {
                     let mtl_filename = words[1];
-                    let result = import_material_file(mtl_filename);
-                    match result {
-                        Ok(new_materials) => materials.extend(new_materials),
-                        Err(err) => println!("Error during importing file: {}", err),
-                    };
+                    materials.extend(import_material_file(mtl_filename)?.into_iter());
                 }
-                "usemtl" => match materials.get(words[1]) {
-                    Some(material) => {
-                        current_material = Some(*material);
+                "usemtl" => {
+                    if words.len() != 2 {
+                        return Err(ParsingError::new(
+                            filename,
+                            line_number,
+                            UnderlyingPasingError::Other(
+                                "Expected material name after usemtl".into(),
+                            ),
+                        ));
                     }
-                    None => {
-                        panic!("Material {} is not found", words[1]);
-                    }
-                },
+                    current_material = *materials.get(words[1]).ok_or(ParsingError::new(
+                        filename,
+                        line_number,
+                        UnderlyingPasingError::Other(format!("Unknown material {}", words[1])),
+                    ))?;
+                }
                 _ => continue,
             }
         }

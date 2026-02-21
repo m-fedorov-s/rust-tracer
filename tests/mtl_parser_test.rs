@@ -348,24 +348,18 @@ fn error_unsupported_illum() {
 // Scene::from_file tests
 // =============================================================================
 
-#[test]
-fn scene_from_file_with_lights() {
+#[rstest]
+#[case("tests/data/example.obj")]
+#[case("tests/data/example_with_mtllib.obj")]
+fn scene_from_file(#[case] filename: &str) {
     // This test verifies that Scene::from_file can parse a simple OBJ file
     // with vertexes, normals, and light sources without panicking
-    let _scene = Scene::from_file("tests/data/example.obj");
-    // If we get here without panic, the test passes
+    let scene = Scene::from_file(filename);
+    scene.expect(format!("File {} not parsed", filename).as_str());
 }
 
 #[test]
-fn scene_from_file_with_mtllib() {
-    // This test verifies that Scene::from_file can load a material library
-    let _scene = Scene::from_file("tests/data/example_with_mtllib.obj");
-    // If we get here without panic, the test passes
-}
-
-#[test]
-#[should_panic(expected = "Material nonexistent is not found")]
-fn scene_from_file_usemtl_unknown_panics() {
+fn scene_from_file_usemtl_unknown() {
     // Create a temp OBJ file with usemtl referencing non-existent material
     let content = r#"
 v 0.0 0.0 0.0
@@ -376,6 +370,16 @@ usemtl nonexistent
 
     let _scene = Scene::from_file(temp_path.to_str().unwrap());
     // Should panic before reaching here
+
+    let err = _scene.unwrap_err();
+
+    assert_eq!(err.line_number, 2);
+    match err.error {
+        UnderlyingPasingError::Other(msg) => {
+            assert!(msg.contains("nonexistent"));
+        }
+        _ => panic!("Expected Other error, got {:?}", err.error),
+    }
 
     // Cleanup (if we somehow get here)
     let _ = std::fs::remove_file(&temp_path);

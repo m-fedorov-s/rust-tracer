@@ -21,6 +21,10 @@ pub trait GeometricObject {
 }
 
 impl Point {
+    pub fn from((x, y, z): (f64, f64, f64)) -> Point {
+        Point(x, y, z)
+    }
+
     pub fn new(x: f64, y: f64, z: f64) -> Point {
         Point(x, y, z)
     }
@@ -118,6 +122,9 @@ impl std::ops::Div<f64> for &Vector {
 }
 
 impl Vector {
+    pub fn from((x, y, z): (f64, f64, f64)) -> Vector {
+        Vector(x, y, z)
+    }
     pub fn new(x: f64, y: f64, z: f64) -> Vector {
         Vector(x, y, z)
     }
@@ -161,6 +168,10 @@ impl Vector {
 }
 
 impl Triangle {
+    pub fn new(a: Point, b: Point, c: Point) -> Triangle {
+        Triangle(a, b, c)
+    }
+
     fn area(&self) -> f64 {
         let side_one = &self.0 - &self.1;
         let side_two = &self.0 - &self.2;
@@ -205,7 +216,31 @@ impl Ray {
 // каждой вершине, и рассчитывать нормаль в точке как взвешенную сумму нормалей в
 // вершинах, с весами, равными барацентрическим координатам.
 
-// struct Sphere {...}
+pub struct Sphere {
+    center: Point,
+    radius: f64,
+}
+
+impl Sphere {
+    pub fn new(center: Point, radius: f64) -> Sphere {
+        Sphere { center, radius }
+    }
+}
+
+impl GeometricObject for Sphere {
+    fn intersects(&self, ray: &Ray) -> Option<Point> {
+        // I have no definition of Ray right now
+        panic!("Not implemented!");
+    }
+
+    fn normale(&self, point: &Point) -> Option<Vector> {
+        if (*point == self.center) {
+            return None;
+        }
+        Some((point - &self.center).normalize())
+    }
+}
+
 // Хотим поддержку шариков ведь, так?)
 
 #[cfg(test)]
